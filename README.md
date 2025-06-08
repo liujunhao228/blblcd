@@ -14,8 +14,6 @@
   * 支持下载子评论和隐藏评论
   * 支持下载"楼中楼"评论
   * 支持下载评论中的图片
-* 📊 **数据分析**：
-  * 支持评论统计并输出地图可视化
 * 💻 **跨平台支持**：
   * Windows
   * MacOS
@@ -29,6 +27,8 @@
 * CSV 文件使用 UTF-8 编码保存，建议使用文本编辑器或代码编辑器打开（不要用 Microsoft Office）
 * 为避免触发反爬，程序限制了请求频率，所以爬取速度较慢
 * 目前以维护现有功能为主，暂不接受新功能开发请求
+* 基于原作者的基础上修改，主要是为了自己用，因此未经过完整测试
+* 相较于原版，移除数据分析（地图相关）功能，增强自定义输出路径
 * 欢迎通过 issues 提交 bug 报告
 
 ## 📝 评论数据字段
@@ -58,6 +58,27 @@ Location       - 位置信息
 * **MID**：UP主ID（搜索UP主视频时必需）
 * **BVID**：视频ID（下载单个/多个视频评论时必需）
 
+### 输出目录说明
+
+#### 基础输出目录
+- 使用 `-output` 或 `-o` 参数指定基础输出目录
+- 默认值为 `./output`
+- 如果不指定其他输出参数，所有文件都会保存在此目录下
+
+#### 评论输出目录
+- 使用 `--comment-output` 参数指定评论内容保存路径
+- 如果不指定，默认保存在基础输出目录下的视频BV号文件夹中
+- 例如：`./output/BV1xx/comments.csv`
+
+#### 图片输出目录
+- 使用 `--image-output` 参数指定评论图片保存路径
+- 如果不指定，默认保存在评论内容所在目录的 `images` 文件夹中
+- 例如：`./output/BV1xx/images/`
+
+#### 目录结构示例
+
+1. **默认情况**（不指定任何输出参数）：
+
 ### 获取必要信息
 
 #### 1. 获取 Cookie
@@ -84,7 +105,6 @@ Location       - 位置信息
 ./blblcd -h
 ```
 
-
 #### 下载视频评论
 
 基础用法：
@@ -109,7 +129,40 @@ blblcd video BV1VJ4m1jk34K -cookie /path/to/cookiefile.text -corder 2
 
 自定义输出路径：
 ```bash
-blblcd video BV1VJ4m1jk34K -corder 2 -output path/to/output
+# 指定基础输出目录
+blblcd video BV1VJ4m1jk34K -output /path/to/output
+
+# 指定评论输出目录
+blblcd video BV1VJ4m1jk34K --comment-output /path/to/comments
+
+# 指定图片输出目录
+blblcd video BV1VJ4m1jk34K --image-output /path/to/images
+
+# 同时指定所有输出目录
+blblcd video BV1VJ4m1jk34K -output /path/to/output --comment-output /path/to/comments --image-output /path/to/images
+```
+
+下载评论中的图片：
+```bash
+blblcd video BV1VJ4m1jk34K -img-download
+```
+
+设置最大重试次数：
+```bash
+blblcd video BV1VJ4m1jk34K -max-try-count 5
+```
+
+完整参数示例：
+```bash
+blblcd video BV1VJ4m1jk34K \
+  -cookie /path/to/cookie.text \
+  -output /path/to/output \
+  --comment-output /path/to/comments \
+  --image-output /path/to/images \
+  -img-download \
+  -workers 5 \
+  -max-try-count 3 \
+  -corder 1
 ```
 
 #### 下载UP主视频评论
@@ -141,7 +194,17 @@ blblcd up 123344555 -skip 3 -pages 5
 
 自定义输出路径：
 ```bash
-blblcd up 123344555 -output output/path
+# 指定基础输出目录
+blblcd up 123344555 -output /path/to/output
+
+# 指定评论输出目录
+blblcd up 123344555 --comment-output /path/to/comments
+
+# 指定图片输出目录
+blblcd up 123344555 --image-output /path/to/images
+
+# 同时指定所有输出目录
+blblcd up 123344555 -output /path/to/output --comment-output /path/to/comments --image-output /path/to/images
 ```
 
 设置并发数：
@@ -149,11 +212,70 @@ blblcd up 123344555 -output output/path
 blblcd up 123344555 -workers 10
 ```
 
-#### 生成地图模板
-
-将 `geo-template.geojson` 放在程序目录下（release包中已包含）：
+下载评论中的图片：
 ```bash
-blblcd video BV1VJ4m1jk34K --mapping
+blblcd up 123344555 -img-download
+```
+
+完整参数示例：
+```bash
+blblcd up 123344555 \
+  -cookie /path/to/cookie.text \
+  -output /path/to/output \
+  --comment-output /path/to/comments \
+  --image-output /path/to/images \
+  -img-download \
+  -workers 10 \
+  -pages 5 \
+  -skip 0 \
+  -vorder pubdate \
+  -max-try-count 3
+```
+
+#### 常用组合示例
+
+1. **下载热门视频评论并按点赞排序**：
+```bash
+blblcd video BV1VJ4m1jk34K -corder 1 -img-download
+```
+
+2. **下载UP主最新发布的视频评论**：
+```bash
+blblcd up 123344555 -vorder pubdate -pages 5
+```
+
+3. **下载UP主最多播放的视频评论**：
+```bash
+blblcd up 123344555 -vorder click -pages 5
+```
+
+4. **下载UP主最多收藏的视频评论**：
+```bash
+blblcd up 123344555 -vorder stow -pages 5
+```
+
+5. **批量下载多个视频评论并保存到指定目录**：
+```bash
+blblcd video BV1xx BV2yy BV3zz -output /custom/output -img-download
+```
+
+6. **下载UP主视频评论并设置高并发**：
+```bash
+blblcd up 123344555 -workers 10 -pages 5 -img-download
+```
+
+7. **下载视频评论并自定义所有输出路径**：
+```bash
+blblcd video BV1VJ4m1jk34K \
+  -output /custom/output \
+  --comment-output /custom/comments \
+  --image-output /custom/images \
+  -img-download
+```
+
+8. **下载UP主视频评论并跳过前3页**：
+```bash
+blblcd up 123344555 -skip 3 -pages 5 -vorder pubdate
 ```
 
 ## 📜 声明
