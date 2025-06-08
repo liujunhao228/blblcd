@@ -14,7 +14,7 @@ import (
 	"sync"
 )
 
-func DwonloadImg(wg *sync.WaitGroup, sem chan struct{}, imageUrl string, output string, prefix string) {
+func DownloadImg(wg *sync.WaitGroup, sem chan struct{}, imageUrl string, output string, prefix string) {
 	// 判断保存路径是否存在
 	if !utils.FileOrPathExists(output) {
 		os.MkdirAll(output, os.ModePerm)
@@ -63,7 +63,7 @@ func WriteImage(uname string, pics []model.Picture, output string) {
 	for _, pic := range pics {
 		wg.Add(1)
 		sem <- struct{}{}
-		go DwonloadImg(&wg, sem, pic.Img_src, output, uname)
+		go DownloadImg(&wg, sem, pic.Img_src, output, uname)
 	}
 	wg.Wait()
 

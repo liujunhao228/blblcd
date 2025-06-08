@@ -9,7 +9,8 @@ type Option struct {
 	Bvid        string
 	Corder      int
 	Output      string
-	Mapping     bool
 	ImgDownload bool
 	MaxTryCount int
+	CommentOutput string
+	ImageOutput   string
 }

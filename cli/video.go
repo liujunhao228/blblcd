@@ -33,11 +33,12 @@ var videoCmd = &cobra.Command{
 			opt := model.Option{
 				Bvid:        bvid,
 				Corder:      corder,
-				Mapping:     mapping,
 				Cookie:      cookie,
 				Output:      output,
 				ImgDownload: imgDownload,
 				MaxTryCount: maxTryCount,
+				CommentOutput: commentOutput,
+				ImageOutput:   imageOutput,
 			}
 			fmt.Printf("bvid" + bvid + "\n")
 			sem := make(chan struct{}, workers)

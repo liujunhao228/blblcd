@@ -14,131 +14,109 @@ import (
 )
 
 func FindComment(sem chan struct{}, wg *sync.WaitGroup, avid int, opt *model.Option) {
-	defer func() {
-		if err := recover(); err != nil {
-			slog.Error(fmt.Sprintf("爬取视频：%d失败", avid))
-			slog.Error(fmt.Sprint(err))
-		}
-		wg.Done()
-		<-sem
-	}()
-	var filename string
-	if opt.Bvid != "" {
-		filename = opt.Bvid
+    defer func() {
+        if err := recover(); err != nil {
+            slog.Error(fmt.Sprintf("爬取视频：%d失败", avid))
+            slog.Error(fmt.Sprint(err))
+        }
+        wg.Done()
+        <-sem
+    }()
+
+    oid := strconv.Itoa(avid)
+    total, err := FetchCount(oid)
+    downloadedCount := 0
+    if err != nil {
+        slog.Error(err.Error())
+        return
+    }
+	savePath := opt.Output
+	if opt.CommentOutput != "" {
+		savePath = path.Join(opt.CommentOutput, opt.Bvid)
 	} else {
-		filename = Avid2Bvid(int64(avid))
+		savePath = path.Join(opt.Output, opt.Bvid)
 	}
-	oid := strconv.Itoa(avid)
-	total, err := FetchCount(oid)
-	downloadedCount := 0
-	if err != nil {
-		slog.Error(err.Error())
-		return
+	
+	imgSavePath := opt.ImageOutput
+	if imgSavePath == "" {
+		imgSavePath = path.Join(savePath, "images")
 	}
-	savePath := path.Join(opt.Output, opt.Bvid)
 	round := 0
-	recordedMap := make(map[int64]bool)
-	statMap := map[string]model.Stat{}
-	maxTryCount := 0 // 当接口返回空数据后重试次数
-	offsetStr := ""
-	for {
-		replyCollection := []model.ReplyItem{}
-		// 停顿
-		delay := (rand.Float32() + 1) * 1e9
-		time.Sleep(time.Duration(delay))
-		slog.Info(fmt.Sprintf("爬取视频评论%s", oid))
-		if downloadedCount >= total {
-			slog.Info(fmt.Sprintf("*****爬取视频：%s评论完成*****", oid))
-			break
-		}
-		round++
-		cmtInfo, _ := FetchComment(oid, round, opt.Corder, opt.Cookie, offsetStr)
+    recordedMap := make(map[int64]bool)
+    maxTryCount := 0 // 当接口返回空数据后重试次数
+    offsetStr := ""
+    for {
+        replyCollection := []model.ReplyItem{}
+        // 停顿
+        delay := (rand.Float32() + 1) * 1e9
+        time.Sleep(time.Duration(delay))
+        slog.Info(fmt.Sprintf("爬取视频评论%s", oid))
+        if downloadedCount >= total {
+            slog.Info(fmt.Sprintf("*****爬取视频：%s评论完成*****", oid))
+            break
+        }
+        round++
+        cmtInfo, _ := FetchComment(oid, round, opt.Corder, opt.Cookie, offsetStr)
 
-		if cmtInfo.Code != 0 {
-			slog.Error(fmt.Sprintf("请求评论失败，视频%s，第%d页失败", oid, round))
-			slog.Error(cmtInfo.Message)
-			break
-		}
-		if len(cmtInfo.Data.Replies) != 0 && len(replyCollection) < total {
-			offsetStr = cmtInfo.Data.Cursor.PaginationReply.NextOffset
-			replyCollection = append(replyCollection, cmtInfo.Data.Replies...)
-			for _, k := range cmtInfo.Data.Replies {
-				if k.Rcount == 0 {
-					continue
-				}
-				if len(k.Replies) > 0 && len(k.Replies) == k.Rcount {
-					replyCollection = append(replyCollection, k.Replies...)
-				} else {
-					subCmts := FindSubComment(k, opt)
-					replyCollection = append(replyCollection, subCmts...)
-				}
-			}
-			if len(cmtInfo.Data.TopReplies) != 0 {
-				replyCollection = append(replyCollection, cmtInfo.Data.TopReplies...)
-				for _, k := range cmtInfo.Data.TopReplies {
-					if len(k.Replies) > 0 {
-						replyCollection = append(replyCollection, k.Replies...)
-					}
-				}
-			}
-		}
+        if cmtInfo.Code != 0 {
+            slog.Error(fmt.Sprintf("请求评论失败，视频%s，第%d页失败", oid, round))
+            slog.Error(cmtInfo.Message)
+            break
+        }
+        if len(cmtInfo.Data.Replies) != 0 && len(replyCollection) < total {
+            offsetStr = cmtInfo.Data.Cursor.PaginationReply.NextOffset
+            replyCollection = append(replyCollection, cmtInfo.Data.Replies...)
+            for _, k := range cmtInfo.Data.Replies {
+                if k.Rcount == 0 {
+                    continue
+                }
+                if len(k.Replies) > 0 && len(k.Replies) == k.Rcount {
+                    replyCollection = append(replyCollection, k.Replies...)
+                } else {
+                    subCmts := FindSubComment(k, opt)
+                    replyCollection = append(replyCollection, subCmts...)
+                }
+            }
+            if len(cmtInfo.Data.TopReplies) != 0 {
+                replyCollection = append(replyCollection, cmtInfo.Data.TopReplies...)
+                for _, k := range cmtInfo.Data.TopReplies {
+                    if len(k.Replies) > 0 {
+                        replyCollection = append(replyCollection, k.Replies...)
+                    }
+                }
+            }
+        }
 
-		if len(replyCollection) == 0 {
-			slog.Info(fmt.Sprintf("-----视频%s，第%d页未获取到评论，停止爬取-----", oid, round))
-			break
-		}
+        if len(replyCollection) == 0 {
+            slog.Info(fmt.Sprintf("-----视频%s，第%d页未获取到评论，停止爬取-----", oid, round))
+            break
+        }
 
-		var cmtCollection = []model.Comment{}
-		isEmpty := true
-		for _, k := range replyCollection[:] {
-			if _, ok := recordedMap[k.Rpid]; !ok {
-				isEmpty = false
-				cmt := NewCMT(&k)
-				recordedMap[cmt.Rpid] = true
-				cmtCollection = append(cmtCollection, cmt)
-				if opt.Mapping {
-					if value, exist := statMap[cmt.Location]; exist {
-						value.Location += 1
-						value.Sex[cmt.Sex] += 1
-						value.Like += cmt.Like
-						value.Level[cmt.Current_level] += 1
-						statMap[cmt.Location] = value
-					} else {
-						state := model.Stat{
-							Name:     cmt.Location,
-							Location: 1,
-							Sex:      map[string]int{"男": 0, "女": 0, "保密": 0},
-							Like:     cmt.Like,
-						}
-						state.Sex[cmt.Sex] += 1
-						state.Level[cmt.Current_level] += 1
-						statMap[cmt.Location] = state
+        var cmtCollection = []model.Comment{}
+        isEmpty := true
+        for _, k := range replyCollection[:] {
+            if _, ok := recordedMap[k.Rpid]; !ok {
+                isEmpty = false
+                cmt := NewCMT(&k)
+                recordedMap[cmt.Rpid] = true
+                cmtCollection = append(cmtCollection, cmt)
+            } else {
+                slog.Info(fmt.Sprintf("评论%d已存在，跳过", k.Rpid))
+            }
+        }
 
-					}
-				}
-			} else {
-				slog.Info(fmt.Sprintf("评论%d已存在，跳过", k.Rpid))
-			}
+        if isEmpty {
+            maxTryCount++
+            if maxTryCount >= opt.MaxTryCount {
+                slog.Info(fmt.Sprintf("请求返回空数据%d次，超过限度将停止爬取", opt.MaxTryCount))
+                break
+            }
+        }
 
-		}
-
-		if isEmpty {
-			maxTryCount++
-			if maxTryCount >= opt.MaxTryCount {
-				slog.Info(fmt.Sprintf("请求返回空数据%d次，超过限度将停止爬取", opt.MaxTryCount))
-				break
-			}
-		}
-
-		downloadedCount += len(cmtCollection)
-		slog.Info(fmt.Sprintf("视频%s，已爬取%d条评论，预计剩余%d条", oid, downloadedCount, total-downloadedCount))
-
-		go store.Save2CSV(filename, cmtCollection, savePath, opt.ImgDownload)
-	}
-	if opt.Mapping {
-		store.WriteGeoJSON(statMap, filename, savePath)
-
-	}
+        downloadedCount += len(cmtCollection)
+        slog.Info(fmt.Sprintf("视频%s，已爬取%d条评论，预计剩余%d条", oid, downloadedCount, total-downloadedCount))
+		go store.Save2CSV(opt.Bvid, cmtCollection, savePath, imgSavePath, opt.ImgDownload)
+    }
 }
 
 func FindSubComment(cmt model.ReplyItem, opt *model.Option) []model.ReplyItem {
@@ -212,7 +190,7 @@ func FindUser(sem chan struct{}, opt *model.Option) {
 	wg := sync.WaitGroup{}
 	round := opt.Skip + 1
 	var videoCollection = []model.VideoItem{}
-	for round <= opt.Pages+opt.Skip {
+	for round < opt.Pages+opt.Skip {
 		// 停顿2s
 		time.Sleep(2 * 1e9)
 		slog.Info(fmt.Sprintf("爬取视频列表第%d页", round))

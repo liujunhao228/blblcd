@@ -52,11 +52,12 @@ var upCmd = &cobra.Command{
 			Vorder:      vorder,
 			Bvid:        "",
 			Corder:      corder,
-			Mapping:     mapping,
 			Cookie:      cookie,
 			Output:      output,
 			ImgDownload: imgDownload,
 			MaxTryCount: maxTryCount,
+			CommentOutput: commentOutput,
+			ImageOutput:   imageOutput,
 		}
 		sem := make(chan struct{}, workers)
 		core.FindUser(sem, &opt)
