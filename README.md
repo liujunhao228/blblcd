@@ -68,17 +68,14 @@ Location       - 位置信息
 5. 找到并复制 cookie 值
 6. 保存为 `cookie.text` 文件（建议放在与 blblcd 相同目录下）
 
-![Cookie示例](./example/cookie.png)
 
 #### 2. 获取 UP主 MID
 在UP主个人空间URL中可以找到MID。例如：`https://space.bilibili.com/112233445` 中的 `112233445` 就是MID。
 
-![MID示例](./example/mid.png)
 
 #### 3. 获取视频 BVID
 在视频页面URL中可以找到BVID。例如：`https://www.bilibili.com/video/BV1Cm421T7Zg` 中的 `BV1Cm421T7Zg` 就是BVID。
 
-![BVID示例](https://md-1301600412.cos.ap-nanjing.myqcloud.com/pic/typora/image-20240607212158235.png)
 
 ### 命令示例
 
@@ -87,7 +84,6 @@ Location       - 位置信息
 ./blblcd -h
 ```
 
-![命令参数](./example/index.png)
 
 #### 下载视频评论
 
