@@ -50,12 +50,6 @@ Current_level  - 当前等级
 Location       - 位置信息
 ```
 
-## 📸 效果预览
-
-![评论地图可视化](./example/mapping.png)
-
-![评论数据示例](https://md-1301600412.cos.ap-nanjing.myqcloud.com/pic/typora/image-20240816044237687.png)
-
 ## 📖 使用指南
 
 ### 准备工作
@@ -165,10 +159,6 @@ blblcd up 123344555 -workers 10
 ```bash
 blblcd video BV1VJ4m1jk34K --mapping
 ```
-
-## ⭐ Star 历史
-
-[![Star History](https://api.star-history.com/svg?repos=WShihan/blblcd&type=Date)](https://star-history.com/#WShihan/blblcd&Date)
 
 ## 📜 声明
 
